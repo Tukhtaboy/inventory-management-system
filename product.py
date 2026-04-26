@@ -3,7 +3,7 @@ from PIL import Image,ImageTk
 from tkinter import ttk,messagebox
 import sqlite3
 
-class productClass:
+class productWindow:
     def __init__(self,root):
         self.root=root
         self.root.geometry("1100x500+320+220")
@@ -59,6 +59,7 @@ class productClass:
         btn_update=Button(product_Frame,text="Update",command=self.update,font=("goudy old style",15),bg="#4caf50",fg="white",cursor="hand2").place(x=120,y=400,width=100,height=40)
         btn_delete=Button(product_Frame,text="Delete",command=self.delete,font=("goudy old style",15),bg="#f44336",fg="white",cursor="hand2").place(x=230,y=400,width=100,height=40)
         btn_clear=Button(product_Frame,text="Clear",command=self.clear,font=("goudy old style",15),bg="#607d8b",fg="white",cursor="hand2").place(x=340,y=400,width=100,height=40)
+        btn_low_stock = Button(product_Frame, text="Low Stock",command=self.low_stock,font=("goudy old style",15),bg="#ff9800", fg="white", cursor="hand2").place(x=10, y=450, width=150, height=40)
 
         #---------- Search Frame -------------
         SearchFrame=LabelFrame(self.root,text="Search Product",font=("goudy old style",12,"bold"),bd=2,relief=RIDGE,bg="white")
@@ -104,12 +105,14 @@ class productClass:
         self.ProductTable.bind("<ButtonRelease-1>",self.get_data)
         self.show()
         self.fetch_cat_sup()
-#-----------------------------------------------------------------------------------------------------
+    def get_connection(self):
+        return sqlite3.connect(database='ims.db')
+
     def fetch_cat_sup(self):
-        self.cat_list.append("Empty")
-        self.sup_list.append("Empty")
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
+        self.cat_list = ["Select"]
+        self.sup_list = ["Select"]
+        con = self.get_connection()
+        cur = con.cursor()
         try:
             cur.execute("select name from category")
             cat=cur.fetchall()
@@ -127,14 +130,14 @@ class productClass:
                     self.sup_list.append(i[0])
         except Exception as ex:
             messagebox.showerror("Error",f"Error due to : {str(ex)}")
-
-    
+        finally:
+            con.close() 
     
     def add(self):
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
+        con = self.get_connection()
+        cur = con.cursor()
         try:
-            if self.var_cat.get()=="Select" or self.var_cat.get()=="Empty" or self.var_sup=="Select" or self.var_sup=="Empty":
+            if self.var_cat.get() == "Select" or self.var_sup.get() == "Select":
                 messagebox.showerror("Error","All fields are required",parent=self.root)
             else:
                 cur.execute("Select * from product where name=?",(self.var_name.get(),))
@@ -156,10 +159,11 @@ class productClass:
                     self.show()
         except Exception as ex:
             messagebox.showerror("Error",f"Error due to : {str(ex)}")
-
+        finally:
+            con.close()
     def show(self):
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
+        con = self.get_connection()
+        cur = con.cursor()
         try:
             cur.execute("select * from product")
             rows=cur.fetchall()
@@ -168,7 +172,8 @@ class productClass:
                 self.ProductTable.insert('',END,values=row)
         except Exception as ex:
             messagebox.showerror("Error",f"Error due to : {str(ex)}")
-
+        finally:
+            con.close()
     def get_data(self,ev):
         f=self.ProductTable.focus()
         content=(self.ProductTable.item(f))
@@ -182,8 +187,8 @@ class productClass:
         self.var_status.set(row[6])
 
     def update(self):
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
+        con = self.get_connection()
+        cur = con.cursor()
         try:
             if self.var_pid.get()=="":
                 messagebox.showerror("Error","Please select product from list",parent=self.root)
@@ -207,10 +212,11 @@ class productClass:
                     self.show()
         except Exception as ex:
             messagebox.showerror("Error",f"Error due to : {str(ex)}")
-
+        finally:
+            con.close()
     def delete(self):
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
+        con = self.get_connection()
+        cur = con.cursor()
         try:
             if self.var_pid.get()=="":
                 messagebox.showerror("Error","Select Product from the list",parent=self.root)
@@ -228,7 +234,8 @@ class productClass:
                         self.clear()
         except Exception as ex:
             messagebox.showerror("Error",f"Error due to : {str(ex)}")
-
+        finally:
+            con.close()
     def clear(self):
         self.var_cat.set("Select")
         self.var_sup.set("Select")
@@ -243,8 +250,8 @@ class productClass:
 
     
     def search(self):
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
+        con = self.get_connection()
+        cur = con.cursor()
         try:
             if self.var_searchby.get()=="Select":
                 messagebox.showerror("Error","Select Search By option",parent=self.root)
@@ -261,8 +268,22 @@ class productClass:
                     messagebox.showerror("Error","No record found!!!",parent=self.root)
         except Exception as ex:
             messagebox.showerror("Error",f"Error due to : {str(ex)}")
-
+        finally:
+            con.close()
+    def low_stock(self):
+        con = self.get_connection()
+        cur = con.cursor()
+        try:
+            cur.execute("SELECT * FROM product WHERE qty < 10")
+            rows = cur.fetchall()
+            self.ProductTable.delete(*self.ProductTable.get_children())
+            for row in rows:
+                self.ProductTable.insert('', END, values=row)
+        except Exception as ex:
+            messagebox.showerror("Error", f"Error due to : {str(ex)}")
+        finally:
+            con.close()
 if __name__=="__main__":
     root=Tk()
-    obj=productClass(root)
+    obj=productWindow(root)
     root.mainloop()
